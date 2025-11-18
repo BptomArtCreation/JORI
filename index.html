@@ -326,10 +326,9 @@
         this.fadeInDuration = 1000;
         this.targetBgFadeDuration = 1000;
         this.statusHideTimer = null;
-        this.preferBack = true; // 預設優先後鏡頭
+        this.preferBack = true;
         this.activeStream = null;
 
-        // iAB 提示
         if (isInAppBrowser()) this.iabTip.style.display = 'block';
 
         this.hideLoading();
@@ -337,11 +336,11 @@
       }
 
       initEventListeners() {
-        // User gesture chain — 不要在這裡用 await，保持同一手勢上下文
+        // 保持在使用者手勢鏈內：不要在 click handler 之外先 await
         this.btnStart.addEventListener('click', () => {
           if (!this.ensureHTTPS()) return;
-          // 先顯示 camera 畫面，避免 video 在 display:none 期間卡黑
           this.showCameraScreen();
+          // 在同一手勢鏈中開始取流與 play
           this.initCameraFlow().catch((err) => {
             console.error(err);
             this.showPermissionDialog('需要您的允許以使用相機。若曾拒絕，請到瀏覽器設定開啟相機權限。');
@@ -355,8 +354,8 @@
             this.showError('無法啟動相機，請確認權限設定，或改用系統瀏覽器開啟。');
           });
         });
-        this.btnDeny.addEventListener('click', () => this.showStartScreen());
 
+        this.btnDeny.addEventListener('click', () => this.showStartScreen());
         this.btnCapture.addEventListener('click', () => this.captureScreenshot());
         this.btnTorch.addEventListener('click', () => this.toggleTorch());
         this.btnSwitch.addEventListener('click', () => this.switchCamera());
@@ -370,7 +369,7 @@
         window.addEventListener('beforeunload', () => this.destroy());
 
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible' && this.camera.srcObject) {
+          if (document.visibilityState === 'visible' && this.camera?.srcObject) {
             this.camera.play().catch(()=>{});
           }
         });
@@ -419,7 +418,7 @@
 
       async initCameraFlow() {
         this.updateStatus('初始化相機...');
-        // 設置 video 屬性（屬性＋property 都設）
+        // 明確設置 video 屬性與屬性值
         this.camera.autoplay = true;
         this.camera.muted = true;
         this.camera.playsInline = true;
@@ -430,13 +429,25 @@
 
         await this.openStreamWithFallback({ preferBack: this.preferBack });
 
-        // 等影格出現且非黑
-        await this.waitForVideoReady(this.camera, 5000);
-        const ok = await this.ensureNonBlackFrames(this.camera, 8, 120);
+        // 等影格出現
+        await this.waitForVideoReady(this.camera, 6000);
+        // 立即檢測是否為黑畫面
+        let ok = await this.ensureNonBlackFrames(this.camera, 10, 120);
         if (!ok) {
           this.updateStatus('偵測黑畫面，嘗試切換鏡頭...', 'error');
           await this.openStreamWithFallback({ preferBack: !this.preferBack });
-          await this.waitForVideoReady(this.camera, 5000);
+          await this.waitForVideoReady(this.camera, 6000);
+          ok = await this.ensureNonBlackFrames(this.camera, 10, 120);
+        }
+        if (!ok) {
+          this.updateStatus('仍為黑畫面，嘗試重建相機元件...', 'error');
+          await this.recreateVideoElement();
+          await this.openStreamWithFallback({ preferBack: this.preferBack });
+          await this.waitForVideoReady(this.camera, 6000);
+          ok = await this.ensureNonBlackFrames(this.camera, 10, 120);
+        }
+        if (!ok) {
+          this.updateStatus('相機輸出為黑畫面，請改用系統瀏覽器或重啟裝置相機', 'error');
         }
 
         // 引導提示
@@ -446,102 +457,137 @@
         this.targetBg.style.opacity = '0.2';
         this.targetBg.src = this.targetImageUrl;
 
-        // 啟動 AR
-        try {
-          await this.initMindAR();
-          this.updateStatus('掃描特定圖片以顯示 3D 模型...');
-          this.scanLine.style.display = 'block';
-        } catch (e) {
-          console.error('MindAR 初始化失敗:', e);
-          this.updateStatus('AR 模組載入失敗，僅提供相機畫面', 'error');
+        // 僅在確認有影格時啟動 AR
+        if (ok) {
+          try {
+            await this.initMindAR();
+            this.updateStatus('掃描特定圖片以顯示 3D 模型...');
+            this.scanLine.style.display = 'block';
+          } catch (e) {
+            console.error('MindAR 初始化失敗:', e);
+            this.updateStatus('AR 模組載入失敗，僅提供相機畫面', 'error');
+          }
         }
       }
 
       async openStreamWithFallback({ preferBack = true } = {}) {
-        // 先關掉舊流
+        // 關掉舊流
         this.stopActiveStream();
 
-        const trySets = [];
-        // 首選：facingMode ideal
-        trySets.push({ video: { facingMode: { ideal: preferBack ? 'environment' : 'user' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 }, advanced: [{ focusMode: 'continuous' }] }, audio: false });
-        // 次選：facingMode exact
-        trySets.push({ video: { facingMode: preferBack ? { exact: 'environment' } : { exact: 'user' } }, audio: false });
-        // 最後：裸 video:true
-        trySets.push({ video: true, audio: false });
+        const base = (fm) => ({
+          video: {
+            facingMode: fm,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 60 },
+            advanced: [{ focusMode: 'continuous' }]
+          },
+          audio: false
+        });
+
+        const constraintList = [
+          base({ exact: preferBack ? 'environment' : 'user' }),
+          base({ ideal: preferBack ? 'environment' : 'user' }),
+          { video: { facingMode: preferBack ? { ideal: 'environment' } : { ideal: 'user' }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
+          { video: true, audio: false },
+        ];
 
         let stream = null;
-        let lastError = null;
-        for (const c of trySets) {
+        let lastErr = null;
+
+        // 先跑一輪常規 constraints
+        for (const c of constraintList) {
           try {
             stream = await navigator.mediaDevices.getUserMedia(c);
             break;
-          } catch (e) { lastError = e; }
+          } catch (e) {
+            lastErr = e;
+          }
         }
 
-        if (!stream) throw lastError || new Error('無法取得相機串流');
-
-        // 如果能 enumerateDevices，改用明確 deviceId（提升後鏡頭命中率）
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const cams = devices.filter(d => d.kind === 'videoinput');
-          const match = cams.find(d => /back|rear|environment|後|背|主鏡/i.test(d.label)) || cams[cams.length - 1];
-          if (match && match.deviceId) {
-            // 直接改用指定 deviceId
-            const byId = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: match.deviceId } }, audio: false });
-            stream.getTracks().forEach(t => t.stop());
-            stream = byId;
-            this.preferBack = /back|rear|environment|後|背|主鏡/i.test(match.label);
+        // 若還沒有，試試 enumerateDevices 精準挑 deviceId
+        if (!stream && navigator.mediaDevices?.enumerateDevices) {
+          try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cams = devices.filter(d => d.kind === 'videoinput');
+            // 優先標記像背鏡頭的 label
+            const pick = cams.find(d => /back|rear|environment|後|背|主鏡/i.test(d.label)) || cams[0];
+            if (pick?.deviceId) {
+              stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: pick.deviceId } }, audio: false });
+              this.preferBack = /back|rear|environment|後|背|主鏡/i.test(pick.label);
+            }
+          } catch (e) {
+            lastErr = e;
           }
-        } catch { /* 有些瀏覽器需權限後才有 label，忽略 */ }
+        }
+
+        if (!stream) throw lastErr || new Error('無法取得相機串流');
 
         this.activeStream = stream;
         this.camera.srcObject = stream;
 
-        // 前鏡頭要鏡像，以符合自拍預期（AR 測試可視需求關閉）
+        // 重要：同一手勢鏈中立刻播放，避免 Safari 不播
+        try { await this.camera.play(); } catch (e) { /* 某些瀏覽器已自動播放 */ }
+
+        // 設定鏡像與 facing 狀態
         const settings = stream.getVideoTracks()[0]?.getSettings?.() || {};
         const isBack = settings.facingMode === 'environment' || this.preferBack;
         this.camera.style.transform = isBack ? 'none' : 'scaleX(-1)';
       }
 
       stopActiveStream() {
-        const tracks = this.activeStream?.getTracks?.() || this.camera.srcObject?.getTracks?.() || [];
+        const tracks = this.activeStream?.getTracks?.() || this.camera?.srcObject?.getTracks?.() || [];
         tracks.forEach(t => t.stop());
-        this.camera.srcObject = null;
+        if (this.camera) this.camera.srcObject = null;
         this.activeStream = null;
       }
 
-      waitForVideoReady(video, timeout=5000) {
+      async recreateVideoElement() {
+        // 修復某些 iOS 黑畫面：重建 video 元件
+        const old = this.camera;
+        const nv = document.createElement('video');
+        nv.id = 'camera';
+        nv.autoplay = true;
+        nv.muted = true;
+        nv.playsInline = true;
+        nv.setAttribute('autoplay', '');
+        nv.setAttribute('muted', '');
+        nv.setAttribute('playsinline', '');
+        nv.setAttribute('webkit-playsinline', '');
+        nv.style.cssText = old.style.cssText;
+        old.replaceWith(nv);
+        this.camera = nv;
+      }
+
+      waitForVideoReady(video, timeout=6000) {
         return new Promise((resolve, reject) => {
           const start = performance.now();
           const done = () => resolve();
           const fail = () => reject(new Error('相機畫面未就緒'));
-          const check = () => {
+          const tick = () => {
             if ((video.readyState >= 2) && video.videoWidth > 0 && video.videoHeight > 0) return done();
             if (performance.now() - start > timeout) return fail();
-            requestAnimationFrame(check);
+            requestAnimationFrame(tick);
           };
           video.addEventListener('loadedmetadata', () => { if (video.videoWidth > 0) done(); }, { once: true });
           video.addEventListener('canplay', () => done(), { once: true });
-          check();
+          tick();
         });
       }
 
-      async ensureNonBlackFrames(video, tries=8, interval=120) {
-        // 取小畫布做亮度檢測
+      async ensureNonBlackFrames(video, tries=10, interval=120) {
         const c = this.procCanvas;
         const ctx = c.getContext('2d', { willReadFrequently: true });
         c.width = 32; c.height = 24;
-
         let good = 0;
         for (let i=0; i<tries; i++) {
           await this.waitNextFrame(video, interval);
           try { ctx.drawImage(video, 0, 0, c.width, c.height); } catch { continue; }
           const img = ctx.getImageData(0,0,c.width,c.height).data;
           let sum = 0;
-          // 取樣部份像素避免太慢
           for (let p=0; p<img.length; p+=16) sum += (img[p] + img[p+1] + img[p+2]);
-          const avg = sum / (img.length/16) / 3; // 0~255
-          if (avg > 2) { // >2 視為不是完全黑
+          const avg = sum / (img.length/16) / 3;
+          if (avg > 2) {
             good++;
             if (good >= 2) return true;
           }
@@ -560,7 +606,7 @@
       }
 
       async initMindAR() {
-        // 自訂 renderer，開 preserveDrawingBuffer 以利截圖
+        // 自訂 renderer：開 preserveDrawingBuffer 以利截圖
         const customRenderer = new THREE.WebGLRenderer({
           alpha: true,
           antialias: true,
@@ -585,7 +631,6 @@
         this.scene = scene;
         this.camera3D = arCamera;
 
-        // Three canvas 初始透明
         try {
           this.renderer.setClearColor(0x000000, 0);
           this.renderer.domElement.style.background = 'transparent';
@@ -593,7 +638,7 @@
           this.renderer.domElement.style.pointerEvents = 'none';
         } catch {}
 
-        // 光源
+        // 燈光
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(1, 1, 1);
@@ -601,12 +646,11 @@
 
         this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 
-        // Anchor 與群組
+        // Anchor 與內容
         this.anchor = start.addAnchor(0);
         const group = new THREE.Group();
         this.anchor.group.add(group);
 
-        // 測試綠球
         const sphere = new THREE.Mesh(
           new THREE.SphereGeometry(0.05, 16, 16),
           new THREE.MeshBasicMaterial({ color: 0x00ff00 })
@@ -615,14 +659,12 @@
         this.anchor.group.add(sphere);
         this.testSphere = sphere;
 
-        // 模型群組
         this.modelGroup = new THREE.Group();
         group.add(this.modelGroup);
         this.modelGroup.visible = false;
         this.modelGroup.scale.set(0.01, 0.01, 0.01);
         this.setGroupOpacity(this.modelGroup, 0);
 
-        // 載入 GLTF（避免 taint）
         const loader = new GLTFLoader();
         loader.setCrossOrigin('anonymous');
         loader.load(this.modelUrl,
@@ -648,17 +690,7 @@
           }
         );
 
-        // WebGL context lost/restore
-        const glCanvas = this.renderer.domElement;
-        glCanvas.addEventListener('webglcontextlost', (e) => {
-          e.preventDefault();
-          this.updateStatus('3D 繪圖上下文遺失，嘗試恢復...', 'error');
-        });
-        glCanvas.addEventListener('webglcontextrestored', () => {
-          this.updateStatus('3D 繪圖已恢復');
-        });
-
-        // 啟動 MindAR（以現有 video 為輸入）
+        // 啟動 MindAR（用現有 video）
         await start.start({ inputSrc: this.camera });
         this.startMindAR = start;
 
@@ -675,7 +707,6 @@
               this.scanLine.style.display = 'none';
             }
 
-            // 顯示模型與淡入
             this.modelGroup.visible = true;
             this.modelGroup.rotation.y += 0.5 * delta;
             if (this.modelFadeInProgress < 1) {
@@ -685,7 +716,6 @@
               this.setGroupOpacity(this.modelGroup, this.modelFadeInProgress);
             }
 
-            // 引導圖淡出
             if (this.targetBgFadeOutProgress < 1) {
               this.targetBgFadeOutProgress = Math.min(this.targetBgFadeOutProgress + delta / (this.targetBgFadeDuration / 1000), 1);
               this.targetBg.style.opacity = 0.2 * (1 - this.targetBgFadeOutProgress);
@@ -701,7 +731,6 @@
               this.targetBg.style.opacity = '0.2';
             }
             this.renderer.domElement.style.opacity = '0';
-            // 模型隱藏與重置
             this.modelGroup.visible = false;
             this.modelFadeInProgress = 0;
             this.setGroupOpacity(this.modelGroup, 0);
@@ -750,15 +779,11 @@
         this.preferBack = !this.preferBack;
         this.updateStatus(`切換至${this.preferBack ? '後' : '前'}鏡頭...`);
         await this.openStreamWithFallback({ preferBack: this.preferBack });
-        await this.waitForVideoReady(this.camera, 4000);
-        // 重新通知 MindAR 以新輸入（保險重啟）
+        await this.waitForVideoReady(this.camera, 5000);
+        // 重新初始化 AR（保險）
         if (this.startMindAR) {
-          try {
-            await this.startMindAR.stop();
-          } catch {}
-          try {
-            await this.initMindAR();
-          } catch (e) {
+          try { await this.startMindAR.stop(); } catch {}
+          try { await this.initMindAR(); } catch (e) {
             console.error(e);
             this.updateStatus('切換鏡頭後 AR 重新初始化失敗', 'error');
           }
@@ -766,7 +791,6 @@
       }
 
       async captureScreenshot() {
-        // 確保相機有尺寸且有新影格
         if (!this.camera.videoWidth || !this.camera.videoHeight) {
           try { await this.waitForVideoReady(this.camera, 2000); } catch {}
         }
@@ -781,37 +805,15 @@
         canvas.width = w;
         canvas.height = h;
 
-        // 底層相機
-        try {
-          ctx.drawImage(this.camera, 0, 0, w, h);
-        } catch (e) {
-          console.warn('繪製相機影像失敗:', e);
-          return this.updateStatus('截圖失敗：相機影像不可用', 'error');
-        }
+        try { ctx.drawImage(this.camera, 0, 0, w, h); }
+        catch (e) { return this.updateStatus('截圖失敗：相機影像不可用', 'error'); }
 
-        // 疊上 AR 畫面（若可）
         let arDrawn = false;
         if (this.renderer) {
           try {
-            // 強制刷新一幀，避免 preserveDrawingBuffer 仍舊幀
             this.renderer.render(this.scene, this.camera3D);
             ctx.drawImage(this.renderer.domElement, 0, 0, w, h);
             arDrawn = true;
-          } catch (e) {
-            console.warn('疊加 AR 層失敗，可能為跨網域素材或 WebGL buffer：', e);
-          }
-        }
-
-        // 若有 2D 覆蓋影片也一併疊上（簡化置中繪製）
-        if (!this.overlayVideo.classList.contains('hidden') && !this.overlayContainer.classList.contains('hidden')) {
-          try {
-            const vw = this.overlayVideo.videoWidth || w;
-            const vh = this.overlayVideo.videoHeight || h;
-            // 以 contain 置中
-            const scale = Math.min(w / vw, h / vh);
-            const dw = vw * scale, dh = vh * scale;
-            const dx = (w - dw) / 2, dy = (h - dh) / 2;
-            ctx.drawImage(this.overlayVideo, dx, dy, dw, dh);
           } catch {}
         }
 
@@ -842,7 +844,6 @@
           }
           this.updateStatus(arDrawn ? '截圖已下載（含 AR 層）' : '截圖已下載（僅相機畫面）');
         } catch (e) {
-          console.error('截圖失敗:', e);
           this.updateStatus('截圖失敗，請確認瀏覽器權限或改用下載', 'error');
         }
       }
@@ -860,7 +861,7 @@
         this.statusTip.classList.remove('hidden');
         this.statusTip.style.background = type === 'error' ? 'rgba(255,0,0,0.7)' : 'rgba(0,0,0,0.7)';
         if (this.statusHideTimer) clearTimeout(this.statusHideTimer);
-        this.statusHideTimer = setTimeout(() => this.statusTip.classList.add('hidden'), 3000);
+        this.statusHideTimer = setTimeout(() => this.statusTip.classList.add('hidden'), 3500);
       }
 
       handleResize() {
