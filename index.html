@@ -44,13 +44,9 @@
       visibility: hidden;
       transition: opacity 0.4s ease, visibility 0.4s ease;
     }
-    #info-modal.show {
-      opacity: 1;
-      visibility: visible;
-    }
+    #info-modal.show { opacity: 1; visibility: visible; }
     #modal-overlay {
-      position: absolute;
-      inset: 0;
+      position: absolute; inset: 0;
       background: rgba(0,0,0,0.75);
       backdrop-filter: blur(8px);
     }
@@ -69,30 +65,15 @@
     }
     #info-modal.show #modal-card { transform: scale(1); }
     #btn-close-modal {
-      position: absolute;
-      top: 0.8rem;
-      right: 0.8rem;
+      position: absolute; top: 0.8rem; right: 0.8rem;
       width: 40px; height: 40px;
       background: rgba(255,255,255,0.1);
-      border: none;
-      border-radius: 50%;
-      font-size: 1.5rem;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border: none; border-radius: 50%;
+      font-size: 1.5rem; color: white; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
     }
-    .modal-title {
-      font-size: 1.5rem;
-      color: var(--accent);
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    .modal-body p, .modal-body ul {
-      line-height: 1.7;
-      margin-bottom: 1rem;
-    }
+    .modal-title { font-size: 1.5rem; color: var(--accent); text-align: center; margin-bottom: 1rem; }
+    .modal-body p, .modal-body ul { line-height: 1.7; margin-bottom: 1rem; }
     .modal-body ul { padding-left: 1.5rem; color: var(--text-secondary); }
     /* ============================================================ */
 
@@ -123,47 +104,65 @@
     .tip { margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); text-align: center; padding: 0 1rem; }
 
     #camera-screen { background: black; justify-content: flex-start; height: 100dvh; display: flex; flex-direction: column; }
-    #camera-container { position: relative; flex: 1; overflow: hidden; }
+    #camera-container { position: relative; flex: 1; overflow: hidden; background: black; }
     #camera {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
-      background: black;
+      background: black; visibility: visible !important; opacity: 1;
     }
+
     #target-bg {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
       max-width: 40vw; max-height: 40vh; object-fit: contain; opacity: 0.2; z-index: 2; display: none;
       animation: pulse 2s infinite;
     }
     @keyframes pulse { 0%,100% { opacity: 0.2; } 50% { opacity: 0.3; } }
+
     #overlay-container { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
     #overlay-video {
       position: absolute; max-width: 100%; max-height: 100%; object-fit: contain;
       left: 50%; top: 50%; transform: translate(-50%, -50%) translateY(100%) scale(0.8);
       transition: transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
+
     #scan-line {
       position: absolute; top: 0; left: 0; width: 100%; height: 2px;
       background: linear-gradient(90deg, transparent, var(--accent), transparent);
       animation: scan 2s linear infinite; opacity: 0.5; z-index: 5; display: none;
     }
     @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
     .topbar, .bottombar { padding: 1rem; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 40; }
     .topbar { border-bottom: 1px solid var(--border); }
     .bottombar { border-top: 1px solid var(--border); }
     .bar { display: flex; gap: 1rem; justify-content: center; align-items: center; }
+
     .status-tip {
       position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.7); padding: 0.75rem 1.5rem; border-radius: var(--radius);
       color: var(--text-secondary); font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; z-index: 25;
     }
     .scan-tip {
-      position: absolute; bottom: 8rem; left: 50%; transform: translateX(-50%) translateY(20px);
+      position: absolute; bottom: 8rem; left: 50%;
+      transform: translateX(-50%) translateY(20px);
       padding: 1rem 2rem; background: rgba(0,0,0,0.8); border-radius: var(--radius);
       font-size: 1rem; color: var(--text-primary); text-align: center; border: 1px solid var(--accent);
       opacity: 0; transition: opacity 0.5s ease, transform 0.5s ease; z-index: 25;
     }
     .scan-tip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     .hidden { display: none !important; }
     canvas.hidden { position: absolute; top: -9999px; left: -9999px; }
+
+    /* 讓 MindAR/Three.js 的 canvas 預設透明且不擋畫面，待就緒再顯示 */
+    #camera-container canvas {
+      position: absolute !important; inset: 0 !important;
+      width: 100% !important; height: 100% !important;
+      z-index: 3 !important;
+      background: transparent !important;
+      opacity: 0; transition: opacity .3s ease;
+      pointer-events: none !important;
+    }
+
     #permission-dialog {
       position: fixed; inset: 0; background: rgba(0,0,0,0.8);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -175,12 +174,13 @@
     #loading { position: fixed; inset: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 50; }
     .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top: 5px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
     #error-tip {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
       background: rgba(255,0,0,0.9); color: white; padding: 1.5rem; border-radius: var(--radius);
       text-align: center; z-index: 100; max-width: 90%;
     }
-    #camera-container canvas { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; z-index: 3 !important; }
+
     @media (max-width: 480px) {
       .screen { justify-content: flex-end; padding-bottom: 4rem; }
       .branding { margin-bottom: 1rem; }
@@ -326,7 +326,7 @@
 
         // Canvases
         this.procCanvas = document.getElementById('proc-canvas');
-        this.captureCanvas = document.getElementById('capture-canvas'); // 修正：補上引用
+        this.captureCanvas = document.getElementById('capture-canvas');
 
         // Assets
         this.trackerImageUrl = './assets/my-target.mind';
@@ -349,7 +349,6 @@
         this.targetBgFadeOutProgress = 0;
         this.fadeInDuration = 1000;
         this.targetBgFadeDuration = 1000;
-
         this.statusHideTimer = null;
 
         this.hideLoading();
@@ -357,7 +356,6 @@
       }
 
       initEventListeners() {
-        // 直接嘗試開相機；失敗時才顯示自製權限對話框
         this.btnStart.addEventListener('click', () => this.startCameraFlow());
         this.btnGrant.addEventListener('click', () => this.initCamera());
         this.btnDeny.addEventListener('click', () => this.showStartScreen());
@@ -401,7 +399,6 @@
         try {
           await this.initCamera(); // 直接嘗試開相機
         } catch (err) {
-          // 失敗才顯示自製權限對話框
           this.showPermissionDialog('需要您的允許以使用相機。若曾拒絕，請到瀏覽器設定開啟相機權限。');
         }
       }
@@ -425,14 +422,12 @@
       async initCamera() {
         try {
           this.updateStatus('初始化相機...');
-          // 優先後置，並允許瀏覽器自行最佳化
           let constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
 
           let stream;
           try {
             stream = await navigator.mediaDevices.getUserMedia(constraints);
           } catch (e) {
-            // 後備方案：任何可用相機
             stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           }
 
@@ -446,19 +441,19 @@
           });
           await this.camera.play();
 
-          // 切換畫面
+          // 顯示相機畫面（此時一定可見）
           this.permissionDialog.classList.add('hidden');
           this.cameraScreen.classList.remove('hidden');
           this.startScreen.classList.add('hidden');
 
-          // 掃描提示與引導圖
+          // 提示與引導圖
           this.scanTip.classList.remove('hidden');
           requestAnimationFrame(() => this.scanTip.classList.add('show'));
           this.targetBg.style.display = 'block';
           this.targetBg.style.opacity = '0.2';
           this.targetBg.src = this.targetImageUrl;
 
-          // 初始化 MindAR（注意：只在 start() 成功後才掛 animationLoop，避免黑屏覆蓋）
+          // 初始化 AR（MindAR canvas 初始透明，避免覆蓋 video）
           try {
             await this.initMindAR();
             this.updateStatus('掃描特定圖片以顯示 3D 模型...');
@@ -482,7 +477,7 @@
           interpolationFactor: 0.03,
           maxTrackLost: 5,
           uiLoading: false,
-          uiScanning: false, // 使用自訂 UI，避免衝突
+          uiScanning: false,
           filterMinCF: 0.1,
           filterBeta: 0.01
         });
@@ -492,19 +487,27 @@
         this.scene = scene;
         this.camera3D = arCamera;
 
+        // 強制 canvas 透明，且初始不顯示（避免黑屏蓋住 video）
+        try {
+          this.renderer.setClearColor(0x000000, 0);
+          this.renderer.domElement.style.background = 'transparent';
+          this.renderer.domElement.style.opacity = '0';
+          this.renderer.domElement.style.pointerEvents = 'none';
+        } catch {}
+
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(1, 1, 1);
         scene.add(dirLight);
 
-        renderer.setClearColor(0x000000, 0);
-        renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+        this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 
+        // Anchor 與群組
         this.anchor = start.addAnchor(0);
         const group = new THREE.Group();
         this.anchor.group.add(group);
 
-        // 測試綠球（移到 anchor.group，僅在追蹤時顯示）
+        // 綠球只在追蹤到時顯示
         const sphere = new THREE.Mesh(
           new THREE.SphereGeometry(0.05, 16, 16),
           new THREE.MeshBasicMaterial({ color: 0x00ff00 })
@@ -544,7 +547,7 @@
           }
         );
 
-        // 先啟動 MindAR，成功後再掛動畫迴圈（避免黑屏）
+        // 先啟動 MindAR，再掛動畫迴圈（避免黑屏覆蓋 video）
         await start.start({ inputSrc: this.camera });
         this.startMindAR = start;
 
@@ -554,28 +557,30 @@
           if (this.mixer) this.mixer.update(delta);
 
           if (this.anchor.visible) {
+            // 第一次偵測到目標時，將 Three canvas 顯示（避免一開始黑屏）
             if (!this.isTargetDetected) {
               this.isTargetDetected = true;
 
-              // 提示關閉
+              // 顯示 Three canvas（淡入）
+              this.renderer.domElement.style.opacity = '1';
+
+              // 隱藏掃描提示
               this.scanTip.classList.remove('show');
               setTimeout(() => this.scanTip.classList.add('hidden'), 300);
-
-              // 掃描線收起
               this.scanLine.style.display = 'none';
             }
 
-            // 顯示覆蓋影片
+            // 顯示覆蓋影片（如需）
             this.overlayContainer.classList.remove('hidden');
             this.overlayVideo.classList.remove('hidden');
             this.overlayVideo.style.transform = 'translate(-50%, -50%) translateY(0) scale(1)';
             this.overlayVideo.play().catch(() => {});
 
-            // 顯示模型並旋轉
+            // 顯示模型與動畫
             this.modelGroup.visible = true;
             this.modelGroup.rotation.y += 0.5 * delta;
 
-            // 模型淡入 + 放大
+            // 模型淡入
             if (this.modelFadeInProgress < 1) {
               this.modelFadeInProgress = Math.min(this.modelFadeInProgress + delta / (this.fadeInDuration / 1000), 1);
               const s = 0.01 + (0.5 - 0.01) * this.modelFadeInProgress;
@@ -593,17 +598,18 @@
             if (this.isTargetDetected) {
               this.isTargetDetected = false;
 
-              // 顯示提示
+              // 顯示掃描提示
               this.scanTip.classList.remove('hidden');
               requestAnimationFrame(() => this.scanTip.classList.add('show'));
 
-              // 引導圖顯示
+              // 顯示引導圖與掃描線
               this.targetBg.style.display = 'block';
               this.targetBg.style.opacity = '0.2';
-
-              // 掃描線顯示
               this.scanLine.style.display = 'block';
             }
+
+            // 仍保持 Three canvas 透明，避免黑屏遮住 video
+            this.renderer.domElement.style.opacity = '0';
 
             // 覆蓋影片收起
             this.overlayVideo.pause();
@@ -611,7 +617,7 @@
             this.overlayVideo.style.transform = 'translate(-50%, -50%) translateY(100%) scale(0.8)';
             this.overlayContainer.classList.add('hidden');
 
-            // 模型隱藏與狀態重置
+            // 模型隱藏與重置
             this.modelGroup.visible = false;
             this.modelFadeInProgress = 0;
             this.setGroupOpacity(this.modelGroup, 0);
@@ -671,8 +677,8 @@
         ctx.drawImage(this.camera, 0, 0, w, h);
 
         // 疊上 AR 畫面（如有）
-        if (this.renderer && this.isTargetDetected) {
-          // 確保 renderer 最新
+        if (this.renderer && (this.isTargetDetected || true)) {
+          // 即便未偵測到目標，renderer 仍可能有 UI 疊加，可同時畫上
           this.renderer.render(this.scene, this.camera3D);
           ctx.drawImage(this.renderer.domElement, 0, 0, w, h);
         }
@@ -681,7 +687,6 @@
           if (canvas.toBlob) {
             canvas.toBlob(b => resolve(b), 'image/png', 0.95);
           } else {
-            // iOS 備援
             const dataURL = canvas.toDataURL('image/png', 0.95);
             const byteString = atob(dataURL.split(',')[1]);
             const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
@@ -729,7 +734,6 @@
         let dragging = false;
         let lastX = 0;
         const el = this.cameraContainer;
-
         const getX = (e) => e.touches ? e.touches[0].clientX : e.clientX;
 
         const onDown = (e) => { dragging = true; lastX = getX(e); };
@@ -752,12 +756,8 @@
       }
 
       async destroy() {
-        try {
-          await this.startMindAR?.stop?.();
-        } catch {}
-        try {
-          this.renderer?.setAnimationLoop(null);
-        } catch {}
+        try { await this.startMindAR?.stop?.(); } catch {}
+        try { this.renderer?.setAnimationLoop(null); } catch {}
         const tracks = this.camera.srcObject?.getTracks?.() || [];
         tracks.forEach(t => t.stop());
         this.camera.srcObject = null;
