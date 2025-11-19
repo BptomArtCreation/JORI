@@ -955,7 +955,7 @@
         const testGeometry = new THREE.SphereGeometry(0.05, 16, 16);
         const testMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
         this.testSphere = new THREE.Mesh(testGeometry, testMaterial);
-        this.testSphere.position.set(0, 0, 0); // 修改：將 Z 軸改為 0，使其位於圖片表面
+        this.testSphere.position.set(0, 0, -0.5);
         scene.add(this.testSphere);
         this.testSphere.visible = true;
 
@@ -999,7 +999,8 @@
 
             model.scale.set(0.5, 0.5, 0.5);
             model.position.set(0, 0, 0);
-            model.rotation.set(0, Math.PI, 0);
+            // 修正：將旋轉設為 0，讓模型正面朝前
+            model.rotation.set(0, 0, 0);
 
             if (gltf.animations && gltf.animations.length > 0) {
               this.mixer = new THREE.AnimationMixer(model);
