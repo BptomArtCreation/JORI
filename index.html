@@ -614,18 +614,18 @@
 
     <section id="start-screen" class="screen hidden">
       <div class="branding">
-        <h1>AR 體驗 Demo</h1>
-        <p>點擊下方按鈕開啟後置鏡頭</p>
+        <h1>TNJ Island 神秘網頁</h1>
+        <p>喔？你發現了這裡呢，請繼續探索。</p>
       </div>
       <!-- 修改：添加按鈕容器和說明按鈕 -->
       <div class="button-group">
         <button id="btn-start" class="btn btn-primary big">
           <span class="icon">📷</span>
-          啟動相機
+          神秘按鈕
         </button>
         <button id="btn-instruction" class="btn btn-outline">
-          <span class="icon">ℹ️</span>
-          使用說明
+          <span class="icon">📃</span>
+          神秘信件
         </button>
       </div>
       <div class="tip">不會上傳影像，僅在本機處理</div>
@@ -634,43 +634,18 @@
     <!-- 新增：說明對話框 -->
     <div id="instruction-dialog">
       <div class="instruction-content">
-        <h2>📖 AR 體驗使用說明</h2>
+        <h2>📃 神秘信件</h2>
         
-        <h3>🎯 功能介紹</h3>
-        <p>這是一個基於 MindAR 的擴增實境（AR）體驗應用，能夠識別特定圖片並在其上疊加 3D 模型。</p>
-        
-        <h3>🚀 使用步驟</h3>
-        <ul>
-          <li><span class="highlight">步驟 1：</span>點擊「啟動相機」按鈕</li>
-          <li><span class="highlight">步驟 2：</span>授予相機權限（首次使用需要）</li>
-          <li><span class="highlight">步驟 3：</span>將相機對準<span class="highlight">目標圖片</span></li>
-          <li><span class="highlight">步驟 4：</span>保持穩定，等待系統識別</li>
-          <li><span class="highlight">步驟 5：</span>識別成功後，3D 模型將出現在圖片上</li>
-        </ul>
-        
-        <h3>💡 使用技巧</h3>
-        <ul>
-          <li>確保<span class="highlight">光線充足</span>，避免陰影或反光</li>
-          <li>保持相機與目標圖片的<span class="highlight">適當距離</span>（約 30-50 公分）</li>
-          <li>目標圖片應<span class="highlight">平整、清晰</span>，避免折疊或污損</li>
-          <li>手機保持<span class="highlight">穩定</span>，避免晃動</li>
-          <li>可以用<span class="highlight">手指拖拉旋轉</span> 3D 模型</li>
-        </ul>
-        
-        <h3>🔧 功能按鈕</h3>
-        <ul>
-          <li><span class="highlight">截圖保存：</span>捕捉當前畫面，包含 3D 模型</li>
-          <li><span class="highlight">手電筒：</span>在光線不足時開啟閃光燈</li>
-        </ul>
-        
-        <h3>⚠️ 注意事項</h3>
-        <ul>
-          <li>請在 <span class="highlight">HTTPS</span> 環境下使用</li>
-          <li>首次使用需授予相機權限</li>
-          <li>建議使用較新版本的手機瀏覽器</li>
-          <li>所有處理均在本機進行，<span class="highlight">不會上傳影像</span></li>
-        </ul>
-        
+        <h3>❤️ Dear Jori,</h3>
+	<p>❣️</p>
+        <p>生日快樂！今天是三十歲了呢！身體要健康呢！身體要開始變差了！</p>
+        <p>要繼續實踐運動好~訓得好~食得好~飲得好既生活~</p>
+	<p>朕又陪左老婆一年嚕，希望你繼續做一個又論論盡盡又為食，但好可愛快樂生活的Jori喔~</p>
+	<p>請繼續解迷~</p>
+        <p>❤️最愛你忠良上❤️</p>
+	<p>2025年11月23日</p>
+	<p>❣️</p>
+       
         <button class="close-btn" id="btn-close-instruction">開始體驗</button>
       </div>
     </div>
@@ -1078,7 +1053,8 @@
             this.overlayVideo.style.transform = 'translate(-50%, -50%) translateY(0) scale(1)';
             
             this.modelGroup.visible = true;
-            this.modelGroup.rotation.y += 0.5 * delta;
+            // 自動旋轉已取消
+            // this.modelGroup.rotation.y += 0.5 * delta;
             
             this.controls.enabled = true;
 
@@ -1212,8 +1188,8 @@
 
           if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             navigator.share({
-              title: 'AR 截圖',
-              text: '來自 AR Overlay 的酷炫截圖！',
+              title: 'TNJ Island AR 體驗截圖',
+              text: '來自 TNJ Island AR 體驗截圖！',
               files: [file]
             }).then(() => {
               console.log('分享成功');
@@ -1238,7 +1214,7 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        this.updateStatus('截圖已下載！');
+        this.updateStatus('TNJ Island AR 體驗截圖已下載！');
       }
 
       updateStatus(text, type = 'info') {
