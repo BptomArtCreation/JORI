@@ -955,7 +955,7 @@
         const testGeometry = new THREE.SphereGeometry(0.05, 16, 16);
         const testMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
         this.testSphere = new THREE.Mesh(testGeometry, testMaterial);
-        this.testSphere.position.set(0, 0, -0.5);
+        this.testSphere.position.set(0, 0, 0); // 修改：將 Z 軸改為 0，使其位於圖片表面
         scene.add(this.testSphere);
         this.testSphere.visible = true;
 
